@@ -1,83 +1,108 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <time.h>
 
-// Constante para o número de territórios
 #define NUM_TERRITORIOS 5
 
-// 1. Struct Territorio
+// ------------------------- STRUCT --------------------------
 typedef struct {
-    char nome[50];
-    char cor_exercito[20];
-    int num_tropas;
+    char nome[20];
+    int tropas;
 } Territorio;
 
-// Função auxiliar para limpar a entrada (necessária após scanf antes de fgets)
-void limpar_buffer() {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
-}
+// ---------------------- FUNÇÃO DE ATAQUE -------------------
+int simularAtaque(Territorio *atacante, Territorio *defensor) {
+    int dadoA = rand() % 6 + 1;
+    int dadoD = rand() % 6 + 1;
 
-// Função para ler os dados de um território, replicando o formato do terminal
-void cadastrar_territorio(Territorio *t, int id) {
-    printf("--- Cadastrando Territorio %d ---\n", id);
-    
-    // Leitura do Nome (usando fgets)
-    printf("Nome do Territorio: ");
-    if (fgets(t->nome, sizeof(t->nome), stdin) != NULL) {
-        // Remove o '\n' que o fgets adiciona
-        t->nome[strcspn(t->nome, "\n")] = 0;
+    printf("\nDado do Atacante: %d", dadoA);
+    printf("\nDado do Defensor: %d\n", dadoD);
+
+    // Empates favorecem o atacante
+    if (dadoA >= dadoD) {
+        defensor->tropas--;
+        printf("➡️ Atacante venceu a rodada! Defensor perdeu 1 tropa.\n");
+        return 1;
+    } else {
+        atacante->tropas--;
+        printf("🛡️ Defensor venceu! Atacante perdeu 1 tropa.\n");
+        return 0;
     }
-    
-    // Leitura da Cor do Exército
-    printf("Cor do Exercito (ex: Azul, Verde): ");
-    // Note: usamos %19s, mas é crucial que o usuário digite 'Azul' ou 'Verde' na linha
-    scanf("%19s", t->cor_exercito); 
-    
-    // Leitura do Número de Tropas
-    printf("Numero de Tropas: ");
-    scanf("%d", &t->num_tropas);
-    
-    // Limpa o buffer de entrada para a próxima chamada de fgets
-    limpar_buffer();
 }
 
-// Função para exibir o estado atual do mapa (Saída exigida pelo nível)
-void exibir_mapa(Territorio mapa[], int tamanho) {
-    printf("\n\n==================================================\n");
-    printf("=== 🌍 Estado Atual do Mapa Inicial ===\n");
-    printf("| %-4s | %-20s | %-10s | %-6s |\n", "ID", "Territorio", "Exercito", "Tropas");
-    printf("|------|----------------------|------------|--------|\n");
-    
-    for (int i = 0; i < tamanho; i++) {
-        printf("| %-4d | %-20s | %-10s | %-6d |\n", 
-               i + 1, 
-               mapa[i].nome, 
-               mapa[i].cor_exercito, 
-               mapa[i].num_tropas);
-    }
-    printf("==================================================\n\n");
-}
-
-int main() {
-    // 2. Vetor estático de 5 elementos
-    Territorio mapa[NUM_TERRITORIOS];
-    
-    // Reproduzindo o cabeçalho da imagem
-    printf("==================================================\n");
-    printf("Vamos cadastrar os %d territorios iniciais do nosso mundo.\n\n", NUM_TERRITORIOS);
-    
-    // O primeiro loop precisa de uma limpeza inicial se o terminal já tiver um \n pendente
-    limpar_buffer();
-    
-    // 3. Loop de cadastro para os 5 territórios
+// ------------------------- EXIBE MAPA -----------------------
+void exibirMapa(Territorio *t) {
+    printf("\n======= MAPA ATUAL =======\n");
     for (int i = 0; i < NUM_TERRITORIOS; i++) {
-        cadastrar_territorio(&mapa[i], i + 1);
-        printf("\n"); // Linha em branco para separar os cadastros, como na imagem
+        printf("%d - %-10s | Tropas: %d\n",
+               i + 1, t[i].nome, t[i].tropas);
     }
-    
-    // 4. Exibir o estado atual do mapa
-    exibir_mapa(mapa, NUM_TERRITORIOS);
-    
+}
+
+// --------------------------- MAIN ---------------------------
+int main() {
+    srand(time(NULL));
+
+    // --------- ALOCAÇÃO DINÂMICA COM CALLOC ---------
+    Territorio *mapa = (Territorio *) calloc(NUM_TERRITORIOS, sizeof(Territorio));
+
+    // --------- CADASTRO DOS TERRITÓRIOS (NOVATO) ----------
+    snprintf(mapa[0].nome, 20, "Colina");
+    snprintf(mapa[1].nome, 20, "Deserto");
+    snprintf(mapa[2].nome, 20, "Floresta");
+    snprintf(mapa[3].nome, 20, "Mina");
+    snprintf(mapa[4].nome, 20, "Vale");
+
+    for (int i = 0; i < NUM_TERRITORIOS; i++) {
+        mapa[i].tropas = rand() % 5 + 3; // 3 a 7 tropas
+    }
+
+    int opcao = 1;
+    int a, d;
+
+    printf("\n===== NÍVEL AVENTUREIRO: BATALHAS ESTRATÉGICAS =====\n");
+
+    while (opcao != 0) {
+        exibirMapa(mapa);
+
+        printf("\n1 - Atacar\n0 - Sair\nEscolha: ");
+        scanf("%d", &opcao);
+
+        if (opcao == 1) {
+            printf("\nEscolha território ATACANTE (1-5): ");
+            scanf("%d", &a);
+
+            printf("Escolha território DEFENSOR (1-5): ");
+            scanf("%d", &d);
+
+            a--; d--;
+
+            if (a == d) {
+                printf("❌ Um território não pode atacar ele mesmo.\n");
+                continue;
+            }
+
+            if (mapa[a].tropas <= 1) {
+                printf("❌ Tropas insuficientes para atacar.\n");
+                continue;
+            }
+
+            printf("\n⚔️ Batalha entre %s e %s!\n",
+                   mapa[a].nome, mapa[d].nome);
+
+            simularAtaque(&mapa[a], &mapa[d]);
+
+            // ----------- CONQUISTA DE TERRITÓRIO -----------
+            if (mapa[d].tropas <= 0) {
+                printf("\n🏆 O território %s foi CONQUISTADO!\n", mapa[d].nome);
+                mapa[d].tropas = 1;
+                mapa[a].tropas--;
+            }
+        }
+    }
+
+    free(mapa);
+    printf("\nJogo encerrado!\n");
+
     return 0;
 }
